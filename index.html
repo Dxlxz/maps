@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sabah Property Finder Pro</title>
+    <title>Sabah Property Finder Pro - Local</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 
+      NOTE: Google Fonts are best handled by downloading the font files 
+      and using @font-face rules in a local CSS file. For simplicity, 
+      this has been removed and the app will use the system's default sans-serif font.
+    -->
 
-    <!-- Libraries -->
+    <!-- Local Libraries -->
     <link rel="stylesheet" href="kendo/styles/default-main.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="leaflet/leaflet.css" />
+    <link rel="stylesheet" href="fontawesome/css/all.min.css">
     
-    <!-- Leaflet Plugins CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css" />
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.7/dist/leaflet-measure.min.css" />
+    <!-- Local Leaflet Plugins CSS -->
+    <link rel="stylesheet" href="leaflet-plugins/geosearch.css" />
+    <link rel="stylesheet" href="leaflet-plugins/leaflet.fullscreen.css" />
+    <link rel="stylesheet" href="leaflet-plugins/leaflet-measure.min.css" />
 
     <style>
         :root {
@@ -31,7 +32,7 @@
             --text-light: #6c757d;
             --border-color: #e9ecef;
             --shadow-color: rgba(0, 0, 0, 0.08);
-            --font-family: 'Poppins', 'Segoe UI', sans-serif;
+            --font-family: 'Poppins', 'Segoe UI', sans-serif; /* Poppins will be a fallback */
         }
         html, body { margin: 0; padding: 0; height: 100%; font-family: var(--font-family); background-color: var(--bg-color); overflow: hidden; font-size: 15px; }
         * { box-sizing: border-box; }
@@ -111,14 +112,14 @@
     </div>
 
     <!-- Core Libraries -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="jquery/jquery-3.7.1.min.js"></script>
     <script src="kendo/js/kendo.all.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="leaflet/leaflet.js"></script>
 
     <!-- Leaflet Plugins JS -->
-    <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
-    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.7/dist/leaflet-measure.min.js"></script>
+    <script src="leaflet-plugins/geosearch.umd.js"></script>
+    <script src="leaflet-plugins/Leaflet.fullscreen.min.js"></script>
+    <script src="leaflet-plugins/leaflet-measure.min.js"></script>
 
     <script>
         $(document).ready(function() {
