@@ -1,0 +1,275 @@
+{
+  "name": "KENDO LEAFLET - FINAL & WORKING",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "10957242-d0ee-4d90-95ad-9946390fbbc6",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1060,
+        860
+      ],
+      "id": "67260995-96e0-40a1-b776-d662dee0f4d5",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "555d53b5-51b1-4f8e-b385-c1a107912a49",
+              "name": "limit",
+              "value": "={{ $json.body.limit }}",
+              "type": "number"
+            },
+            {
+              "id": "2d8f1e58-f54f-4d40-9b4f-a957221226b3",
+              "name": "bounds",
+              "value": "={{ JSON.parse($json.body.bounds) }}",
+              "type": "json"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -840,
+        860
+      ],
+      "id": "f38bb69a-6f17-4ba8-b6f9-aca013ff102f",
+      "name": "Prepare Data (FIX)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.output }}"
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        860
+      ],
+      "id": "61638dcf-1899-47be-8434-c491cfe43c68",
+      "name": "Microsoft SQL"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        1080
+      ],
+      "id": "9d8e5402-f0cd-4fe3-96d1-515c931ec7d8",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "WsN1XbJXYAWnxbxN",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ { ...$json.body, bounds: $json.bounds }.toJsonString() }}",
+        "options": {
+          "systemMessage": "You are an expert T-SQL query generator for a Microsoft SQL Server database. Your task is to convert a JSON input into a single, precise, and secure SELECT statement that includes hierarchical search relevance.\n\n**Database Context:**\n*   **Table:** `[RevaluationData].[dbo].[RevaluationProperties]` (aliased as `p`)\n*   **Key Columns:** `PropertyID`, `Propertyname`, `Address_Address`, `Address_Taman`, `Address_Road`, `Address_PostCode`, `Address_Locality`, `PropertyCategoryName`, `ZoneName`, `SubzoneName`, `Assessment_EstimatedMarketValue`, `Latitude`, `Longitude`, `IsArchived`, `Status`.\n\n---\n\n**QUERY GENERATION RULES:**\n\n1.  **TOP Clause:**\n    *   Your `SELECT` statement MUST begin with `SELECT TOP {{ $json.limit }}`.\n    *   The columns to select are always: `p.PropertyID, p.Propertyname, p.Address_Address, p.Address_Taman, p.Address_Road, p.Address_PostCode, p.Address_Locality, p.PropertyCategoryName, p.Latitude, p.Longitude, p.ZoneName, p.SubzoneName, p.Assessment_EstimatedMarketValue`.\n\n2.  **Mandatory Base Filters:**\n    *   Your `WHERE` clause MUST always include: `p.IsArchived = 0 AND p.Status = 'Update'`.\n\n3.  **Search Term Filter (`WHERE` clause):**\n    *   If the `query` parameter is not empty, add this block:\n        `AND (p.PropertyID LIKE '%{{ $json.query }}%' OR p.Propertyname LIKE '%{{ $json.query }}%' OR p.Address_Address LIKE '%{{ $json.query }}%' OR p.Address_Taman LIKE '%{{ $json.query }}%' OR p.Address_Locality LIKE '%{{ $json.query }}%' OR p.ZoneName LIKE '%{{ $json.query }}%' OR p.SubzoneName LIKE '%{{ $json.query }}%' OR p.PropertyCategoryName LIKE '%{{ $json.query }}%' OR CAST(p.Assessment_EstimatedMarketValue AS NVARCHAR(50)) LIKE '%{{ $json.query }}%')`\n\n4.  **Hierarchical Sorting (`ORDER BY` clause - CRITICAL):**\n    *   After the `WHERE` clause, you MUST add an `ORDER BY` clause to rank results.\n    *   Construct the `ORDER BY` clause exactly like this:\n        ```sql\n        ORDER BY\n            CASE\n                WHEN p.ZoneName LIKE '%{{ $json.query }}%' THEN 1\n                WHEN p.SubzoneName LIKE '%{{ $json.query }}%' THEN 2\n                WHEN p.Address_Locality LIKE '%{{ $json.query }}%' THEN 3\n                WHEN p.Propertyname LIKE '%{{ $json.query }}%' THEN 4\n                WHEN p.Address_Taman LIKE '%{{ $json.query }}%' THEN 5\n                ELSE 99\n            END ASC\n        ```\n\n5.  **Geographic Bounds Filter:**\n    *   If the `bounds` object exists, add these conditions to the `WHERE` clause:\n        `AND p.Latitude BETWEEN {{ $json.bounds._southWest.lat }} AND {{ $json.bounds._northEast.lat }}`\n        `AND p.Longitude BETWEEN {{ $json.bounds._southWest.lng }} AND {{ $json.bounds._northEast.lng }}`\n\n6.  **Output Format:** Your final output MUST ONLY be the raw SQL query string. Do not include any other text."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -620,
+        860
+      ],
+      "id": "921ec973-6fc4-411b-b484-e6265fa2d5e8",
+      "name": "SQL query generator"
+    },
+    {
+      "parameters": {
+        "text": "={{ { originalQuery: $json.body.query, sqlResults: $json.data }.toJsonString() }}",
+        "options": {
+          "systemMessage": "You are a highly efficient data processor. Your task is to analyze the results from a property database query and format them into a structured JSON output for a web application.\n\n**Your Input:**\nYou will receive a single JSON object with two keys:\n1.  `originalQuery`: A string containing the user's original search term.\n2.  `sqlResults`: An array of property objects found by the database. This array could be empty.\n\n**Core Logic & Rules:**\n\n1.  **Iterate Through `sqlResults`:** Your main task is to process EACH item in the `sqlResults` array.\n\n2.  **For EACH Property, Create a Standardized JSON Object:**\n    For every property object in `sqlResults`, generate a new JSON object with this exact structure:\n\n    ```json\n    {\n      \"targetPropertyFound\": true,\n      \"targetPropertyData\": {\n        \"propertyId\": \"[The value of PropertyID]\",\n        \"propertyName\": \"[The value of Propertyname]\",\n        \"address\": \"[A cleanly formatted full address from Address_Address, Address_Road, Address_Taman, Address_PostCode. Omit any parts that are null, empty, or 'Nil'. Use commas as separators.]\",\n        \"locality\": \"[The value of Address_Locality]\",\n        \"category\": \"[The value of PropertyCategoryName]\",\n        \"latitude\": [The numeric value of Latitude],\n        \"longitude\": [The numeric value of Longitude],\n        \"zoneName\": \"[The value of ZoneName]\",\n        \"subzoneName\": \"[The value of SubzoneName]\",\n        \"marketValue\": [The numeric value of Assessment_EstimatedMarketValue]\n      }\n    }\n    ```\n\n3.  **Handling \"No Results\" Scenario:**\n    *   If the `sqlResults` array is empty (`[]`), you must output ONLY this specific JSON object:\n    ```json\n    {\n      \"targetPropertyFound\": false,\n      \"targetPropertyData\": null\n    }\n    ```\n\n**Final Output Format (Strict Requirement):**\n*   Your final output must be an array of the JSON objects you generated in Step 2.\n*   If there were no results, your output will be an array containing the single \"not found\" object from Step 4.\n*   **DO NOT** wrap the array in another object or include any text, explanations, or markdown. Your response is the raw JSON array itself."
+        }
+      },
+      "type": "n8n-nodes-base.llm.prompt",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        860
+      ],
+      "id": "a9a30b42-70b7-4c07-afb5-88574d6f83ab",
+      "name": "Format Data for Frontend"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list"
+        },
+        "jsonMode": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        40,
+        860
+      ],
+      "id": "1600db3a-b9be-45d8-a703-d4572baf0044",
+      "name": "LLM Formatter",
+      "credentials": {
+        "openAiApi": {
+          "id": "WsN1XbJXYAWnxbxN",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse( $json.output )"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        860
+      ],
+      "id": "1b084931-1554-47b2-9a00-33b8118002a2",
+      "name": "Parse LLM Output"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        860
+      ],
+      "id": "08feea49-eead-4709-84f3-f0b1169f7727",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data (FIX)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data (FIX)": {
+      "main": [
+        [
+          {
+            "node": "SQL query generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Microsoft SQL": {
+      "main": [
+        [
+          {
+            "node": "Format Data for Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SQL query generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SQL query generator": {
+      "main": [
+        [
+          {
+            "node": "Microsoft SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data for Frontend": {
+      "main": [
+        [
+          {
+            "node": "LLM Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Formatter": {
+      "main": [
+        [
+          {
+            "node": "Parse LLM Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse LLM Output": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e229712a-364e-4f7f-864a-38a4175334de",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "im4RSutmiT9TLVra",
+  "tags": []
+}

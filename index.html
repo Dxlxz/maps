@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sabah Property Finder Pro</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Libraries -->
+    <link rel="stylesheet" href="kendo/styles/default-main.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- Leaflet Plugins CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.css" />
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.7/dist/leaflet-measure.min.css" />
+
+    <style>
+        :root {
+            --primary-color: #1e4e79;
+            --secondary-color: #4a90e2;
+            --accent-color: #ff6b6b;
+            --light-color: #ffffff;
+            --bg-color: #f4f7fc;
+            --text-dark: #343a40;
+            --text-light: #6c757d;
+            --border-color: #e9ecef;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --font-family: 'Poppins', 'Segoe UI', sans-serif;
+        }
+        html, body { margin: 0; padding: 0; height: 100%; font-family: var(--font-family); background-color: var(--bg-color); overflow: hidden; font-size: 15px; }
+        * { box-sizing: border-box; }
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        .app-header { background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; padding: 12px 25px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 12px var(--shadow-color); z-index: 1010; }
+        .app-header h1 { font-size: 24px; font-weight: 600; margin: 0; }
+        .app-main-content { display: flex; flex-grow: 1; height: calc(100% - 66px); }
+        .sidebar { width: 450px; background-color: var(--light-color); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease; }
+        .search-panel { padding: 20px; border-bottom: 1px solid var(--border-color); }
+        #propertySearch { width: 100%; margin-bottom: 15px; }
+        .search-container { display: flex; gap: 10px; align-items: center; }
+        .search-container #searchButton, .search-container #clearButton { flex-grow: 1; }
+        .results-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .results-header h2 { font-size: 18px; color: var(--primary-color); margin: 0; font-weight: 600; }
+        #resultsCount { font-size: 14px; color: var(--text-light); }
+        .results-panel { flex-grow: 1; overflow-y: auto; padding: 15px; }
+        .property-card { background: var(--light-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px var(--shadow-color); position: relative; border-left: 5px solid var(--secondary-color); }
+        .property-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); border-left-color: var(--accent-color); }
+        .property-card.highlighted { background-color: #e9f5ff; border-color: var(--secondary-color); box-shadow: 0 8px 20px rgba(74, 144, 226, 0.3); }
+        .property-card h3 { margin: 0 0 5px; font-size: 18px; color: var(--primary-color); font-weight: 600; }
+        .property-card .property-locality { font-size: 14px; color: var(--text-light); margin-bottom: 12px; }
+        .property-card .property-price { font-size: 17px; font-weight: 700; color: var(--accent-color); margin: 10px 0; }
+        .property-card i { margin-right: 8px; color: var(--text-light); width: 16px; text-align: center; }
+        .property-meta { display: flex; gap: 8px; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--border-color); flex-wrap: wrap; }
+        .property-meta span { font-size: 11px; background-color: #eef2f7; color: var(--primary-color); padding: 4px 10px; border-radius: 15px; font-weight: 500; }
+        .property-card-icon { position: absolute; top: 15px; right: 15px; font-size: 20px; color: var(--border-color); }
+        .map-container { flex-grow: 1; position: relative; }
+        #map { width: 100%; height: 100%; background: #e9ecef; }
+        .map-legend { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); line-height: 1.8; }
+        .map-legend h4 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+        .legend-item { display: flex; align-items: center; font-size: 13px; }
+        .legend-item i { width: 20px; height: 20px; margin-right: 10px; border-radius: 50%; color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; border: 1px solid rgba(0,0,0,0.2); }
+        .status-indicator { text-align: center; padding: 60px 20px; color: var(--text-light); }
+        .loading-spinner { border: 4px solid var(--bg-color); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .property-marker-inner { border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4); border: 2px solid white; transition: all 0.3s ease; }
+        .property-marker-inner.highlighted { transform: scale(1.4); z-index: 1000; border: 2px solid var(--accent-color); }
+        @media (max-width: 900px) { .app-main-content { flex-direction: column-reverse; } .sidebar { width: 100%; height: 45%; border-right: none; border-top: 1px solid var(--border-color); } .map-container { height: 55%; } .app-header h1 { font-size: 20px; } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header class="app-header">
+            <i class="fa-solid fa-map-location-dot fa-xl"></i>
+            <h1>Sabah Property Finder Pro</h1>
+        </header>
+
+        <main class="app-main-content">
+            <aside class="sidebar">
+                <div class="search-panel">
+                    <input id="propertySearch" placeholder="Search by name, zone, ID, value..."/>
+                    <div class="search-container">
+                        <input id="searchLimit" />
+                        <button id="searchButton"><i class="fa-solid fa-search"></i> Search</button>
+                        <button id="clearButton" class="k-button-secondary"><i class="fa-solid fa-eraser"></i> Clear</button>
+                    </div>
+                </div>
+                <div class="results-header">
+                    <h2>Search Results</h2>
+                    <span id="resultsCount">0 properties</span>
+                </div>
+                <div class="results-panel" id="resultsContent">
+                    <div class="status-indicator" id="initialMessage">
+                        <i class="fa-solid fa-house-chimney-window fa-3x" style="color:var(--border-color); margin-bottom: 20px;"></i>
+                        <h3>Find Your Next Property</h3>
+                        <p>Use the search bar to find properties across Sabah.</p>
+                    </div>
+                    <div class="status-indicator" id="loadingIndicator" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <h3>Searching Properties...</h3>
+                    </div>
+                </div>
+            </aside>
+            <section class="map-container">
+                <div id="map"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Core Libraries (Kendo UI kini menggunakan fail tempatan) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="kendo/js/kendo.all.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet Plugins JS -->
+    <script src="https://unpkg.com/leaflet-geosearch@3.11.0/dist/geosearch.umd.js"></script>
+    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@2.1.7/dist/leaflet-measure.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // --- CONFIGURATION ---
+            const WEBHOOK_URL = 'https://earthinfointern.dxlxz01.uk/webhook-test/10957242-d0ee-4d90-95ad-9946390fbbc6';
+            const SABAH_CENTER = [5.9804, 116.0735];
+            const PROPERTY_CATEGORIES = {
+                'Residential': { color: '#4a90e2', icon: 'fa-house-chimney' },
+                'Commercial': { color: '#ff6b6b', icon: 'fa-store' },
+                'Land': { color: '#50c878', icon: 'fa-layer-group' },
+                'Government': { color: '#f5a623', icon: 'fa-building-flag' },
+                'Default': { color: '#8b9bad', icon: 'fa-building' }
+            };
+
+            // --- INITIALIZATION ---
+            $("#propertySearch").kendoTextBox({});
+            $("#searchLimit").kendoDropDownList({
+                dataTextField: "text", dataValueField: "value",
+                dataSource: [
+                    { text: "10 Results", value: 10 }, 
+                    { text: "25 Results", value: 25 }, 
+                    { text: "50 Results", value: 50 }, 
+                    { text: "100 Results", value: 100 },
+                    { text: "All Results", value: 10000 } // Use a large number for "All"
+                ],
+                value: 25, width: 140
+            });
+            $("#searchButton").kendoButton({ themeColor: 'primary' });
+            $("#clearButton").kendoButton();
+
+            // Map Layers
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+            const baseMaps = { "Street": streetLayer, "Satellite": satelliteLayer };
+
+            const map = L.map('map', { layers: [streetLayer] }).setView(SABAH_CENTER, 10);
+            const propertyMarkers = L.layerGroup().addTo(map);
+
+            // Map Controls (Plugins)
+            L.control.layers(baseMaps).addTo(map);
+            L.control.scale().addTo(map);
+            L.control.fullscreen().addTo(map);
+            new L.Control.GeoSearch({ provider: new L.GeoSearch.OpenStreetMapProvider() }).addTo(map);
+            new L.Control.Measure({ primaryLengthUnit: 'meters', secondaryLengthUnit: 'kilometers', primaryAreaUnit: 'sqmeters' }).addTo(map);
+            const legend = L.control({position: 'bottomleft'});
+            legend.onAdd = createMapLegend;
+            legend.addTo(map);
+
+            // --- UI & HELPER FUNCTIONS ---
+            function showLoading(show) { $("#loadingIndicator").toggle(show); if (show) $("#initialMessage, .property-card, .no-results").remove(); }
+            function showNoResults() { $("#resultsContent").html('<div class="status-indicator no-results"><i class="fa-solid fa-magnifying-glass fa-3x" style="color:var(--border-color); margin-bottom: 20px;"></i><h3>No Properties Found</h3><p>Try a different search term.</p></div>'); }
+            function formatCurrency(value) { return (value === null || isNaN(value)) ? 'N/A' : new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(value); }
+            function createMapLegend() {
+                const div = L.DomUtil.create('div', 'map-legend');
+                let legendHtml = '<h4>Legend</h4>';
+                Object.entries(PROPERTY_CATEGORIES).filter(([key]) => key !== 'Default').forEach(([key, cat]) => {
+                    legendHtml += `<div class="legend-item"><i style="background-color: ${cat.color};" class="fa-solid ${cat.icon}"></i> ${key}</div>`;
+                });
+                div.innerHTML = legendHtml;
+                return div;
+            }
+            function clearSearch() { $("#propertySearch").data("kendoTextBox").value(""); $("#resultsContent").html($("#initialMessage").clone().show()); $("#resultsCount").text("0 properties"); propertyMarkers.clearLayers(); map.flyTo(SABAH_CENTER, 10); }
+
+            // --- DATA FETCHING & RENDERING ---
+            function fetchProperties(searchTerm) {
+                if (!searchTerm || !searchTerm.trim()) return;
+                showLoading(true);
+                $.ajax({
+                    url: WEBHOOK_URL, type: 'POST', contentType: 'application/json',
+                    data: JSON.stringify({
+                        query: searchTerm,
+                        limit: parseInt($("#searchLimit").data("kendoDropDownList").value()),
+                        bounds: JSON.stringify(map.getBounds())
+                    }),
+                    success: updateResults,
+                    error: (xhr, status, error) => console.error("Error:", error),
+                    complete: () => showLoading(false)
+                });
+            }
+
+            function updateResults(responseArray) {
+                const resultsContent = $("#resultsContent");
+                resultsContent.empty(); propertyMarkers.clearLayers();
+                if (!Array.isArray(responseArray) || responseArray.length === 0 || (responseArray[0] && !responseArray[0].targetPropertyFound)) {
+                    showNoResults(); $("#resultsCount").text("0 properties"); return;
+                }
+                
+                responseArray.forEach(item => {
+                    if (item && item.targetPropertyFound && item.targetPropertyData) {
+                        const property = item.targetPropertyData;
+                        createPropertyCard(property, resultsContent);
+                        createPropertyMarker(property, propertyMarkers);
+                    }
+                });
+
+                $("#resultsCount").text(`${responseArray.length} ${responseArray.length === 1 ? 'property' : 'properties'}`);
+                if (responseArray.length > 0) map.fitBounds(propertyMarkers.getBounds(), { padding: [50, 50] });
+            }
+
+            function createPropertyCard(property, container) {
+                const categoryInfo = getCategoryInfo(property.category);
+                const card = $(`
+                    <div class="property-card" data-id="${property.propertyId}">
+                        <i class="fa-solid ${categoryInfo.icon} property-card-icon"></i>
+                        <h3>${property.propertyName || 'Unnamed Property'}</h3>
+                        <p class="property-locality"><i class="fa-solid fa-map-pin"></i>${property.locality || 'N/A'}</p>
+                        <p class="property-price"><i class="fa-solid fa-dollar-sign"></i>${formatCurrency(property.marketValue)}</p>
+                        <div class="property-meta">
+                            ${property.zoneName ? `<span>Zone: ${property.zoneName}</span>` : ''}
+                            ${property.subzoneName ? `<span>Subzone: ${property.subzoneName}</span>` : ''}
+                            <span>ID: ${property.propertyId}</span>
+                        </div>
+                    </div>
+                `);
+                card.on('click', () => { const marker = findMarkerById(property.propertyId); if(marker){ map.flyTo(marker.getLatLng(), 17); marker.openPopup(); } highlightElements(property.propertyId); });
+                container.append(card);
+            }
+
+            function createPropertyMarker(property, layerGroup) {
+                const categoryInfo = getCategoryInfo(property.category);
+                const marker = L.marker([property.latitude, property.longitude], {
+                    icon: L.divIcon({
+                        className: 'property-marker',
+                        html: `<div style="background-color: ${categoryInfo.color};" class="property-marker-inner"><i class="fa-solid ${categoryInfo.icon}"></i></div>`,
+                        iconSize: [34, 34], iconAnchor: [17, 17]
+                    })
+                }).addTo(layerGroup);
+                
+                marker.propertyId = property.propertyId;
+                marker.bindPopup(`
+                    <div style="min-width: 250px">
+                        <h3 style="margin: 0 0 10px; color: #1e4e79">${property.propertyName}</h3>
+                        <p><strong>Value:</strong> ${formatCurrency(property.marketValue)}</p>
+                        <p><strong>Address:</strong> ${property.address || 'N/A'}</p>
+                        <p><strong>Zone:</strong> ${property.zoneName || 'N/A'}</p>
+                        <p><strong>ID:</strong> ${property.propertyId}</p>
+                    </div>`);
+                
+                marker.on('click', () => { highlightElements(property.propertyId); const card = $(`.property-card[data-id="${property.propertyId}"]`); if (card.length) { $('#resultsContent').animate({ scrollTop: card.offset().top - $('#resultsContent').offset().top + $('#resultsContent').scrollTop() - 10 }, 300); } });
+            }
+
+            function getCategoryInfo(categoryString) {
+                const key = Object.keys(PROPERTY_CATEGORIES).find(k => (categoryString || '').toLowerCase().includes(k.toLowerCase())) || 'Default';
+                return PROPERTY_CATEGORIES[key];
+            }
+
+            function findMarkerById(id) { let marker; propertyMarkers.eachLayer(layer => { if (layer.propertyId === id) marker = layer; }); return marker; }
+
+            function highlightElements(propertyId) {
+                $('.property-card').removeClass('highlighted');
+                $(`.property-card[data-id="${propertyId}"]`).addClass('highlighted');
+                $('.property-marker-inner').removeClass('highlighted');
+                const marker = findMarkerById(propertyId);
+                if (marker && marker._icon) $(marker._icon).find('.property-marker-inner').addClass('highlighted');
+            }
+
+            // --- EVENT LISTENERS ---
+            $("#searchButton").on("click", () => fetchProperties($("#propertySearch").val()));
+            $("#propertySearch").on("keydown", e => { if (e.key === 'Enter') $("#searchButton").click(); });
+            $("#clearButton").on("click", clearSearch);
+        });
+    </script>
+</body>
+</html>
